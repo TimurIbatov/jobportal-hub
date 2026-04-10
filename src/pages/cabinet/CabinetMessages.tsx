@@ -3,26 +3,26 @@ import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { getContacts, getConversation, sendMessage as sendMsg } from '@/lib/mock-api';
+import { getContacts, getConversation, sendMessage } from '@/lib/api';
 import { Message } from '@/lib/types';
 import { Send, MessageSquare } from 'lucide-react';
 
 export default function CabinetMessages() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [contacts, setContacts] = useState<any[]>([]);
   const [selectedContact, setSelectedContact] = useState<any>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [text, setText] = useState('');
 
-  useEffect(() => { if (user) setContacts(getContacts(user.id)); }, [user]);
+  useEffect(() => { if (user) getContacts(user.id).then(setContacts); }, [user]);
   useEffect(() => {
-    if (user && selectedContact) setMessages(getConversation(user.id, selectedContact.userId, selectedContact.vacancyId));
+    if (user && selectedContact) getConversation(user.id, selectedContact.userId, selectedContact.vacancyId).then(setMessages);
   }, [user, selectedContact]);
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!user || !selectedContact || !text.trim()) return;
-    sendMsg(user.id, `${user.first_name} ${user.last_name}`, selectedContact.userId, text.trim(), selectedContact.vacancyId);
-    setMessages(getConversation(user.id, selectedContact.userId, selectedContact.vacancyId));
+    await sendMessage(user.id, selectedContact.userId, text.trim(), selectedContact.vacancyId);
+    setMessages(await getConversation(user.id, selectedContact.userId, selectedContact.vacancyId));
     setText('');
   };
 

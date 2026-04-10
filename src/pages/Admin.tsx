@@ -3,16 +3,16 @@ import { useNavigate } from 'react-router-dom';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { useAuth } from '@/hooks/useAuth';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { getAdminStats, getAllUsers, getAllVacancies, deleteUser, toggleVacancyActive } from '@/lib/mock-api';
+import { getAdminStats, getAllProfiles, getAllVacancies, toggleVacancyActive } from '@/lib/api';
 import { formatSalary } from '@/lib/constants';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Users, Briefcase, Send, Trash2, ToggleLeft } from 'lucide-react';
+import { Users, Briefcase, Trash2, ToggleLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 export default function AdminPage() {
-  const { user, isAuthenticated, isInitialized } = useAuth();
+  const { profile, isAuthenticated, isInitialized } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [stats, setStats] = useState({ users: 0, vacancies: 0, applications: 0, activeVacancies: 0 });
@@ -20,13 +20,17 @@ export default function AdminPage() {
   const [vacancies, setVacancies] = useState<any[]>([]);
 
   useEffect(() => {
-    if (isInitialized && (!isAuthenticated || user?.role !== 'admin')) navigate('/login');
-  }, [isInitialized, isAuthenticated, user]);
+    if (isInitialized && (!isAuthenticated || profile?.role !== 'admin')) navigate('/login');
+  }, [isInitialized, isAuthenticated, profile]);
 
-  const load = () => { setStats(getAdminStats()); setUsers(getAllUsers()); setVacancies(getAllVacancies()); };
-  useEffect(load, []);
+  const load = async () => {
+    setStats(await getAdminStats());
+    setUsers(await getAllProfiles());
+    setVacancies(await getAllVacancies());
+  };
+  useEffect(() => { if (profile?.role === 'admin') load(); }, [profile]);
 
-  if (!user || user.role !== 'admin') return null;
+  if (!profile || profile.role !== 'admin') return null;
 
   const roleLabels: Record<string, string> = { job_seeker: 'Соискатель', employer: 'Работодатель', admin: 'Админ' };
 
@@ -46,18 +50,17 @@ export default function AdminPage() {
           <TabsContent value="users">
             <div className="space-y-2">{users.map(u => (
               <Card key={u.id} className="border-none shadow-sm"><CardContent className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div><p className="font-bold text-foreground">{u.first_name} {u.last_name}</p><p className="text-sm text-muted-foreground">{u.email} • {roleLabels[u.role]}</p></div>
-                <Button variant="destructive" size="sm" onClick={() => { deleteUser(u.id); load(); toast({ title: 'Удалён' }); }}><Trash2 className="w-4 h-4" /></Button>
+                <div><p className="font-bold text-foreground">{u.first_name} {u.last_name}</p><p className="text-sm text-muted-foreground">{roleLabels[u.role] || u.role}</p></div>
               </CardContent></Card>
             ))}</div>
           </TabsContent>
           <TabsContent value="vacancies">
             <div className="space-y-2">{vacancies.map(v => (
               <Card key={v.id} className="border-none shadow-sm"><CardContent className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div><p className="font-bold text-foreground">{v.title}</p><p className="text-sm text-muted-foreground">{v.company_name} • {v.applications_count} откликов</p></div>
+                <div><p className="font-bold text-foreground">{v.title}</p><p className="text-sm text-muted-foreground">{v.company_name} • {v.applications_count || 0} откликов</p></div>
                 <div className="flex items-center gap-2">
                   <span className={`text-xs font-bold px-3 py-1 rounded-full ${v.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{v.is_active ? 'Активна' : 'Закрыта'}</span>
-                  <Button variant="outline" size="sm" onClick={() => { toggleVacancyActive(v.id); load(); }}><ToggleLeft className="w-4 h-4" /></Button>
+                  <Button variant="outline" size="sm" onClick={async () => { await toggleVacancyActive(v.id, !v.is_active); await load(); }}><ToggleLeft className="w-4 h-4" /></Button>
                 </div>
               </CardContent></Card>
             ))}</div>
