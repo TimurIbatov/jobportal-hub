@@ -5,7 +5,7 @@ import { Footer } from '@/components/layout/Footer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
-import { getVacancy, createApplication, getApplications } from '@/lib/mock-api';
+import { getVacancy, createApplication, getApplicationForVacancy } from '@/lib/api';
 import { formatSalary, EMPLOYMENT_TYPES, EXPERIENCE_LEVELS, APPLICATION_STATUS_LABELS, APPLICATION_STATUS_COLORS } from '@/lib/constants';
 import { useAuth } from '@/hooks/useAuth';
 import { Vacancy } from '@/lib/types';
@@ -15,27 +15,32 @@ import { useToast } from '@/hooks/use-toast';
 export default function VacancyDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user, isAuthenticated } = useAuth();
+  const { user, profile, isAuthenticated } = useAuth();
   const { toast } = useToast();
   const [vacancy, setVacancy] = useState<Vacancy | null>(null);
   const [applicationStatus, setApplicationStatus] = useState<string | null>(null);
   const [coverLetter, setCoverLetter] = useState('');
   const [showApplyForm, setShowApplyForm] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!id) return;
-    const v = getVacancy(Number(id));
-    setVacancy(v || null);
-    if (isAuthenticated && user?.role === 'job_seeker') {
-      const apps = getApplications({ job_seeker_id: user.id, vacancy_id: Number(id) });
-      if (apps.length > 0) setApplicationStatus(apps[0].status);
+    setLoading(true);
+    getVacancy(id).then(v => {
+      setVacancy(v);
+      setLoading(false);
+    });
+    if (isAuthenticated && user && profile?.role === 'job_seeker') {
+      getApplicationForVacancy(id, user.id).then(app => {
+        if (app) setApplicationStatus(app.status);
+      });
     }
-  }, [id, isAuthenticated, user]);
+  }, [id, isAuthenticated, user, profile]);
 
-  const handleApply = () => {
+  const handleApply = async () => {
     if (!user || !vacancy) return;
     try {
-      createApplication(vacancy.id, user.id, coverLetter);
+      await createApplication(vacancy.id, user.id, coverLetter);
       setApplicationStatus('pending');
       setShowApplyForm(false);
       toast({ title: 'Отклик отправлен!', description: 'Работодатель получит ваш отклик.' });
@@ -44,6 +49,7 @@ export default function VacancyDetailPage() {
     }
   };
 
+  if (loading) return <div className="min-h-screen flex flex-col"><Header /><div className="flex-1 flex items-center justify-center"><p className="text-muted-foreground">Загрузка...</p></div><Footer /></div>;
   if (!vacancy) return <div className="min-h-screen flex flex-col"><Header /><div className="flex-1 flex items-center justify-center"><p className="text-muted-foreground">Вакансия не найдена</p></div><Footer /></div>;
 
   return (
@@ -51,7 +57,6 @@ export default function VacancyDetailPage() {
       <Header />
       <main className="flex-1 container max-w-4xl mx-auto px-4 py-8">
         <Button variant="ghost" onClick={() => navigate(-1)} className="mb-6 text-muted-foreground"><ArrowLeft className="w-4 h-4 mr-2" /> Назад</Button>
-
         <Card className="border-none shadow-lg rounded-2xl overflow-hidden bg-card">
           <CardContent className="p-6 md:p-10">
             <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-8">
@@ -63,19 +68,16 @@ export default function VacancyDetailPage() {
                 <p className="text-2xl font-black text-foreground">{formatSalary(vacancy.salary_min, vacancy.salary_max)}</p>
               </div>
             </div>
-
             <div className="flex flex-wrap gap-3 mb-8">
               {vacancy.location && <span className="flex items-center gap-1 text-sm text-muted-foreground bg-secondary px-3 py-1.5 rounded-full font-bold"><MapPin className="w-3 h-3" />{vacancy.location}</span>}
               <span className="flex items-center gap-1 text-sm text-muted-foreground bg-secondary px-3 py-1.5 rounded-full font-bold"><Briefcase className="w-3 h-3" />{EMPLOYMENT_TYPES[vacancy.employment_type]}</span>
               <span className="flex items-center gap-1 text-sm text-muted-foreground bg-secondary px-3 py-1.5 rounded-full font-bold"><Clock className="w-3 h-3" />{EXPERIENCE_LEVELS[vacancy.experience_level]}</span>
-              <span className="flex items-center gap-1 text-sm text-muted-foreground bg-secondary px-3 py-1.5 rounded-full font-bold"><Users className="w-3 h-3" />{vacancy.applications_count} откликов</span>
+              <span className="flex items-center gap-1 text-sm text-muted-foreground bg-secondary px-3 py-1.5 rounded-full font-bold"><Users className="w-3 h-3" />{vacancy.applications_count || 0} откликов</span>
             </div>
-
             <div className="prose max-w-none mb-8">
               <h3 className="text-lg font-black text-foreground mb-3">Описание</h3>
               <p className="text-muted-foreground whitespace-pre-line">{vacancy.description}</p>
             </div>
-
             {vacancy.skills_required.length > 0 && (
               <div className="mb-8">
                 <h3 className="text-lg font-black text-foreground mb-3">Навыки</h3>
@@ -84,9 +86,7 @@ export default function VacancyDetailPage() {
                 </div>
               </div>
             )}
-
-            {/* Apply section */}
-            {isAuthenticated && user?.role === 'job_seeker' && (
+            {isAuthenticated && profile?.role === 'job_seeker' && (
               <div className="pt-6 border-t border-border">
                 {applicationStatus ? (
                   <div className="flex items-center gap-3">

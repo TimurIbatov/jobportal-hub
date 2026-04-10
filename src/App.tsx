@@ -52,6 +52,7 @@ const App = () => (
             <Route index element={<EmployerDashboard />} />
             <Route path="vacancies" element={<EmployerVacancies />} />
             <Route path="vacancy/new" element={<EmployerNewVacancy />} />
+            <Route path="vacancy/edit/:id" element={<EmployerNewVacancy />} />
             <Route path="applications" element={<EmployerApplications />} />
             <Route path="messages" element={<EmployerMessages />} />
             <Route path="company" element={<EmployerCompany />} />

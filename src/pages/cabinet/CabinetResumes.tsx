@@ -3,9 +3,10 @@ import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { getResumes, createResume, deleteResume } from '@/lib/mock-api';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { getResumes, createResume, deleteResume, uploadResumeFile } from '@/lib/api';
 import { Resume } from '@/lib/types';
-import { FileText, Plus, Trash2, Upload } from 'lucide-react';
+import { FileText, Plus, Trash2, Upload, Eye } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 export default function CabinetResumes() {
@@ -14,27 +15,33 @@ export default function CabinetResumes() {
   const [resumes, setResumes] = useState<Resume[]>([]);
   const [title, setTitle] = useState('');
   const [showForm, setShowForm] = useState(false);
+  const [viewResume, setViewResume] = useState<Resume | null>(null);
 
-  const load = () => { if (user) setResumes(getResumes(user.id)); };
-  useEffect(load, [user]);
+  const load = async () => { if (user) setResumes(await getResumes(user.id)); };
+  useEffect(() => { load(); }, [user]);
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!user || !title.trim()) return;
-    createResume(user.id, title.trim(), `${title.trim().replace(/\s/g, '_')}.pdf`);
-    setTitle(''); setShowForm(false); load();
+    await createResume(user.id, title.trim(), `${title.trim().replace(/\s/g, '_')}.pdf`);
+    setTitle(''); setShowForm(false); await load();
     toast({ title: 'Резюме добавлено' });
   };
 
-  const handleDelete = (id: number) => { deleteResume(id); load(); toast({ title: 'Резюме удалено' }); };
+  const handleDelete = async (id: string) => { await deleteResume(id); await load(); toast({ title: 'Резюме удалено' }); };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !user) return;
     const allowed = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
     if (!allowed.includes(file.type)) { toast({ title: 'Ошибка', description: 'Допустимые форматы: .pdf, .docx', variant: 'destructive' }); return; }
-    createResume(user.id, file.name.replace(/\.[^/.]+$/, ''), file.name);
-    load();
-    toast({ title: 'Резюме загружено', description: file.name });
+    try {
+      const fileUrl = await uploadResumeFile(user.id, file);
+      await createResume(user.id, file.name.replace(/\.[^/.]+$/, ''), file.name, fileUrl);
+      await load();
+      toast({ title: 'Резюме загружено', description: file.name });
+    } catch (err: any) {
+      toast({ title: 'Ошибка загрузки', description: err.message, variant: 'destructive' });
+    }
   };
 
   return (
@@ -70,12 +77,37 @@ export default function CabinetResumes() {
                     <p className="text-xs text-muted-foreground">{r.file_name || 'Без файла'} • {new Date(r.created_at).toLocaleDateString('ru-RU')}</p>
                   </div>
                 </div>
-                <Button variant="ghost" size="sm" onClick={() => handleDelete(r.id)} className="text-destructive"><Trash2 className="w-4 h-4" /></Button>
+                <div className="flex gap-2">
+                  <Button variant="ghost" size="sm" onClick={() => setViewResume(r)} className="text-primary"><Eye className="w-4 h-4" /></Button>
+                  <Button variant="ghost" size="sm" onClick={() => handleDelete(r.id)} className="text-destructive"><Trash2 className="w-4 h-4" /></Button>
+                </div>
               </CardContent>
             </Card>
           ))}
         </div>
       )}
+
+      <Dialog open={!!viewResume} onOpenChange={() => setViewResume(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader><DialogTitle>{viewResume?.title}</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div className="flex items-center gap-3">
+              <FileText className="w-12 h-12 text-primary" />
+              <div>
+                <p className="font-bold text-foreground">{viewResume?.title}</p>
+                <p className="text-sm text-muted-foreground">{viewResume?.file_name || 'Без файла'}</p>
+                <p className="text-xs text-muted-foreground">Создано: {viewResume?.created_at ? new Date(viewResume.created_at).toLocaleDateString('ru-RU') : ''}</p>
+              </div>
+            </div>
+            {viewResume?.file_url && (
+              <Button asChild className="w-full rounded-xl">
+                <a href={viewResume.file_url} target="_blank" rel="noopener noreferrer">Скачать файл</a>
+              </Button>
+            )}
+            {viewResume?.content && <p className="text-sm text-muted-foreground whitespace-pre-line">{viewResume.content}</p>}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

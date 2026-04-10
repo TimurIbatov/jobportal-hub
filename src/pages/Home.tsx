@@ -4,7 +4,7 @@ import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { getVacancies } from '@/lib/mock-api';
+import { getVacancies } from '@/lib/api';
 import { formatSalary } from '@/lib/constants';
 import { Vacancy } from '@/lib/types';
 import { Search, Briefcase, ArrowRight, Users, Building2, TrendingUp } from 'lucide-react';
@@ -14,7 +14,7 @@ export default function HomePage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [latestVacancies, setLatestVacancies] = useState<Vacancy[]>([]);
 
-  useEffect(() => { setLatestVacancies(getVacancies().slice(0, 4)); }, []);
+  useEffect(() => { getVacancies().then(v => setLatestVacancies(v.slice(0, 4))); }, []);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,7 +25,6 @@ export default function HomePage() {
     <div className="min-h-screen flex flex-col">
       <Header />
       <main className="flex-1">
-        {/* Hero */}
         <section className="py-12 sm:py-20 md:py-24 bg-card relative overflow-hidden">
           <div className="absolute top-0 right-0 w-[400px] sm:w-[600px] h-[400px] sm:h-[600px] bg-primary/5 rounded-full mix-blend-multiply filter blur-[120px] opacity-50 -translate-y-1/2 translate-x-1/3" />
           <div className="container max-w-7xl mx-auto px-4 sm:px-6 md:px-8 relative z-10">
@@ -45,7 +44,7 @@ export default function HomePage() {
                 <div className="mt-10 flex flex-wrap justify-center lg:justify-start gap-3">
                   <span className="text-sm font-bold text-muted-foreground py-1 uppercase tracking-widest">Часто ищут:</span>
                   {['Дизайн', 'Продажи', 'Разработка', 'Маркетинг'].map(tag => (
-                    <button key={tag} onClick={() => { setSearchQuery(tag); navigate(`/vacancies?search=${encodeURIComponent(tag)}`); }} className="text-sm font-bold bg-secondary hover:bg-primary hover:text-primary-foreground px-4 py-1.5 rounded-full text-muted-foreground transition-all border border-border">{tag}</button>
+                    <button key={tag} onClick={() => navigate(`/vacancies?search=${encodeURIComponent(tag)}`)} className="text-sm font-bold bg-secondary hover:bg-primary hover:text-primary-foreground px-4 py-1.5 rounded-full text-muted-foreground transition-all border border-border">{tag}</button>
                   ))}
                 </div>
               </div>
@@ -61,8 +60,6 @@ export default function HomePage() {
             </div>
           </div>
         </section>
-
-        {/* Stats */}
         <section className="py-12 bg-card border-y border-border">
           <div className="container max-w-7xl mx-auto px-4 grid grid-cols-1 sm:grid-cols-3 gap-8 text-center">
             <div className="flex flex-col items-center gap-2"><Users className="w-8 h-8 text-primary" /><span className="text-3xl font-black text-foreground">10 000+</span><span className="text-sm text-muted-foreground font-medium">Соискателей</span></div>
@@ -70,8 +67,6 @@ export default function HomePage() {
             <div className="flex flex-col items-center gap-2"><TrendingUp className="w-8 h-8 text-primary" /><span className="text-3xl font-black text-foreground">95%</span><span className="text-sm text-muted-foreground font-medium">Находят работу</span></div>
           </div>
         </section>
-
-        {/* Latest Vacancies */}
         <section className="py-20 bg-background">
           <div className="container max-w-7xl mx-auto px-4 text-center">
             <h2 className="text-3xl font-black text-foreground mb-12 tracking-tight">Свежие вакансии</h2>
@@ -80,7 +75,7 @@ export default function HomePage() {
                 <button key={v.id} onClick={() => navigate(`/vacancies/${v.id}`)} className="bg-card p-6 rounded-2xl border border-border hover:border-primary hover:shadow-xl transition-all text-left group">
                   <h3 className="font-bold text-foreground mb-2 group-hover:text-primary transition-colors line-clamp-1">{v.title}</h3>
                   <p className="text-sm text-muted-foreground mb-3 line-clamp-1">{v.company_name}</p>
-                  <p className="text-sm text-muted-foreground mb-1">{v.applications_count} откликов</p>
+                  <p className="text-sm text-muted-foreground mb-1">{v.applications_count || 0} откликов</p>
                   <p className="text-lg font-black text-foreground">{formatSalary(v.salary_min, v.salary_max)}</p>
                 </button>
               ))}

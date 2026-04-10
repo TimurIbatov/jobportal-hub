@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { getEmployerVacancies } from '@/lib/mock-api';
+import { getEmployerVacancies } from '@/lib/api';
 import { formatSalary } from '@/lib/constants';
 import { Vacancy } from '@/lib/types';
 import { Plus, Users, Eye } from 'lucide-react';
@@ -11,7 +11,7 @@ import { Plus, Users, Eye } from 'lucide-react';
 export default function EmployerVacancies() {
   const { user } = useAuth();
   const [vacancies, setVacancies] = useState<Vacancy[]>([]);
-  useEffect(() => { if (user) setVacancies(getEmployerVacancies(user.id)); }, [user]);
+  useEffect(() => { if (user) getEmployerVacancies(user.id).then(setVacancies); }, [user]);
 
   return (
     <div className="space-y-6">
@@ -31,12 +31,13 @@ export default function EmployerVacancies() {
                     <h3 className="font-bold text-foreground">{v.title}</h3>
                     <p className="text-sm text-muted-foreground">{formatSalary(v.salary_min, v.salary_max)}</p>
                     <div className="flex items-center gap-4 mt-1 text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1"><Users className="w-3 h-3" />{v.applications_count} откликов</span>
+                      <span className="flex items-center gap-1"><Users className="w-3 h-3" />{v.applications_count || 0} откликов</span>
                       <span className="flex items-center gap-1"><Eye className="w-3 h-3" />{v.views_count} просмотров</span>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className={`text-xs font-bold px-3 py-1 rounded-full ${v.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{v.is_active ? 'Активна' : 'Закрыта'}</span>
+                    <Link to={`/employer/vacancy/edit/${v.id}`}><Button size="sm" variant="outline" className="rounded-lg text-xs">Редактировать</Button></Link>
                   </div>
                 </div>
               </CardContent>

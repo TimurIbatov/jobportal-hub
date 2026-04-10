@@ -1,42 +1,63 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { createVacancy } from '@/lib/mock-api';
+import { createVacancy, updateVacancy, getVacancy, getCompanyByUserId } from '@/lib/api';
 import { EMPLOYMENT_TYPES, EXPERIENCE_LEVELS } from '@/lib/constants';
 import { useToast } from '@/hooks/use-toast';
 
 export default function EmployerNewVacancy() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { id } = useParams();
+  const isEdit = !!id;
   const [form, setForm] = useState({
     title: '', description: '', salary_min: '', salary_max: '',
     employment_type: 'full_time', experience_level: 'mid', location: '', skills: '',
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    if (isEdit && id) {
+      getVacancy(id).then(v => {
+        if (v) setForm({
+          title: v.title, description: v.description,
+          salary_min: v.salary_min?.toString() || '', salary_max: v.salary_max?.toString() || '',
+          employment_type: v.employment_type, experience_level: v.experience_level,
+          location: v.location || '', skills: v.skills_required.join(', '),
+        });
+      });
+    }
+  }, [id, isEdit]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
-    createVacancy({
+    const company = await getCompanyByUserId(user.id);
+    const data = {
       title: form.title, description: form.description,
       salary_min: form.salary_min ? Number(form.salary_min) : undefined,
       salary_max: form.salary_max ? Number(form.salary_max) : undefined,
       employment_type: form.employment_type, experience_level: form.experience_level,
-      location: form.location, skills_required: form.skills.split(',').map(s => s.trim()).filter(Boolean),
-      user_id: user.id, company_name: user.company_name || user.first_name,
-    });
-    toast({ title: 'Вакансия создана!' });
+      location: form.location || undefined, skills_required: form.skills.split(',').map(s => s.trim()).filter(Boolean),
+    };
+    if (isEdit && id) {
+      await updateVacancy(id, data);
+      toast({ title: 'Вакансия обновлена!' });
+    } else {
+      await createVacancy({ ...data, user_id: user.id, company_id: company?.id });
+      toast({ title: 'Вакансия создана!' });
+    }
     navigate('/employer/vacancies');
   };
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-black text-foreground">Новая вакансия</h1>
+      <h1 className="text-2xl font-black text-foreground">{isEdit ? 'Редактировать вакансию' : 'Новая вакансия'}</h1>
       <Card className="border-none shadow-sm">
         <CardContent className="p-6">
           <form onSubmit={handleSubmit} className="space-y-5">
@@ -58,7 +79,7 @@ export default function EmployerNewVacancy() {
             </div>
             <div><Label>Город</Label><Input value={form.location} onChange={e => setForm(p => ({ ...p, location: e.target.value }))} className="rounded-xl mt-1" /></div>
             <div><Label>Навыки (через запятую)</Label><Input value={form.skills} onChange={e => setForm(p => ({ ...p, skills: e.target.value }))} placeholder="React, TypeScript, Node.js" className="rounded-xl mt-1" /></div>
-            <Button type="submit" className="h-12 px-8 rounded-xl font-black text-lg">Опубликовать</Button>
+            <Button type="submit" className="h-12 px-8 rounded-xl font-black text-lg">{isEdit ? 'Сохранить' : 'Опубликовать'}</Button>
           </form>
         </CardContent>
       </Card>

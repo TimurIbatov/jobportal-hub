@@ -4,14 +4,14 @@ import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { getCompanies } from '@/lib/mock-api';
+import { getCompanies } from '@/lib/api';
 import { Company } from '@/lib/types';
 import { Building2, Star, MapPin, Briefcase } from 'lucide-react';
 
 export default function CompaniesPage() {
   const navigate = useNavigate();
   const [companies, setCompanies] = useState<Company[]>([]);
-  useEffect(() => { setCompanies(getCompanies()); }, []);
+  useEffect(() => { getCompanies().then(setCompanies); }, []);
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -29,13 +29,13 @@ export default function CompaniesPage() {
                     </div>
                     <div>
                       <h2 className="text-xl font-black text-foreground mb-1">{c.name}</h2>
-                      <div className="flex items-center gap-1 text-yellow-500 font-bold text-sm"><Star className="w-4 h-4 fill-current" /> {c.rating.toFixed(1)}</div>
+                      <div className="flex items-center gap-1 text-yellow-500 font-bold text-sm"><Star className="w-4 h-4 fill-current" /> {Number(c.rating).toFixed(1)}</div>
                     </div>
                   </div>
                   <p className="text-sm text-muted-foreground mb-4">{c.description}</p>
                   <div className="space-y-2 mb-6">
-                    <div className="flex items-center gap-2 text-sm font-bold text-muted-foreground"><MapPin className="w-4 h-4" />{c.location}</div>
-                    <div className="flex items-center gap-2 text-sm font-bold text-muted-foreground"><Briefcase className="w-4 h-4" />{c.active_vacancies} активных вакансий</div>
+                    {c.location && <div className="flex items-center gap-2 text-sm font-bold text-muted-foreground"><MapPin className="w-4 h-4" />{c.location}</div>}
+                    <div className="flex items-center gap-2 text-sm font-bold text-muted-foreground"><Briefcase className="w-4 h-4" />{c.active_vacancies || 0} активных вакансий</div>
                   </div>
                   <Button onClick={() => navigate(`/vacancies?search=${encodeURIComponent(c.name)}`)} className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-black rounded-xl">Вакансии компании</Button>
                 </CardContent>
