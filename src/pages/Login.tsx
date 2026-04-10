@@ -9,12 +9,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useAuth } from '@/hooks/useAuth';
 import { AlertCircle, Loader2, Briefcase } from 'lucide-react';
 
-const DEMO_ACCOUNTS = [
-  { email: 'seeker@example.com', password: 'password123', label: 'Соискатель' },
-  { email: 'employer@example.com', password: 'password123', label: 'Работодатель' },
-  { email: 'admin@example.com', password: 'password123', label: 'Админ' },
-];
-
 export default function LoginPage() {
   const navigate = useNavigate();
   const { login, isLoading, error } = useAuth();
@@ -24,15 +18,8 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const user = await login(email, password);
-      navigate(user.role === 'employer' ? '/employer' : user.role === 'admin' ? '/admin' : '/cabinet');
-    } catch {}
-  };
-
-  const quickLogin = async (account: typeof DEMO_ACCOUNTS[0]) => {
-    try {
-      const user = await login(account.email, account.password);
-      navigate(user.role === 'employer' ? '/employer' : user.role === 'admin' ? '/admin' : '/cabinet');
+      const profile = await login(email, password);
+      navigate(profile.role === 'employer' ? '/employer' : profile.role === 'admin' ? '/admin' : '/cabinet');
     } catch {}
   };
 
@@ -70,15 +57,7 @@ export default function LoginPage() {
                   {isLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : 'ВОЙТИ'}
                 </Button>
               </form>
-              <div className="mt-8 pt-6 border-t border-border">
-                <p className="text-center text-muted-foreground font-medium mb-4">Нет аккаунта? <Link to="/register" className="text-primary font-black hover:underline">Зарегистрироваться</Link></p>
-                <p className="text-xs text-center text-muted-foreground mb-3 font-bold uppercase tracking-widest">Демо-входы</p>
-                <div className="grid grid-cols-3 gap-2">
-                  {DEMO_ACCOUNTS.map(a => (
-                    <button key={a.email} type="button" onClick={() => quickLogin(a)} disabled={isLoading} className="px-3 py-2.5 text-xs font-bold rounded-lg border border-border bg-secondary hover:bg-card hover:border-primary transition-all text-muted-foreground hover:text-primary">{a.label}</button>
-                  ))}
-                </div>
-              </div>
+              <p className="text-center text-muted-foreground font-medium mt-8 pt-6 border-t border-border">Нет аккаунта? <Link to="/register" className="text-primary font-black hover:underline">Зарегистрироваться</Link></p>
             </CardContent>
           </Card>
         </div>

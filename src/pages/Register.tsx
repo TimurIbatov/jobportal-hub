@@ -29,8 +29,8 @@ export default function RegisterPage() {
     if (formData.password !== formData.confirm_password) { setPasswordError('Пароли не совпадают'); return; }
     if (formData.password.length < 6) { setPasswordError('Минимум 6 символов'); return; }
     try {
-      const user = await register(formData.email, formData.password, formData.first_name, formData.last_name, formData.role, formData.phone, formData.company_name);
-      navigate(user.role === 'employer' ? '/employer' : '/cabinet');
+      const profile = await register(formData.email, formData.password, formData.first_name, formData.last_name, formData.role, formData.phone, formData.company_name);
+      navigate(profile.role === 'employer' ? '/employer' : '/cabinet');
     } catch {}
   };
 
@@ -51,7 +51,6 @@ export default function RegisterPage() {
                 </div>
               )}
               <form onSubmit={handleSubmit} className="space-y-5">
-                {/* Role selection */}
                 <div className="space-y-2">
                   <Label className="text-sm font-bold text-foreground ml-1">Я регистрируюсь как</Label>
                   <div className="grid grid-cols-2 gap-3">
@@ -63,42 +62,18 @@ export default function RegisterPage() {
                     </button>
                   </div>
                 </div>
-
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-2">
-                    <Label className="text-sm font-bold ml-1">Имя</Label>
-                    <Input name="first_name" placeholder="Имя" className="h-12 rounded-xl" value={formData.first_name} onChange={handleChange} required disabled={isLoading} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-sm font-bold ml-1">Фамилия</Label>
-                    <Input name="last_name" placeholder="Фамилия" className="h-12 rounded-xl" value={formData.last_name} onChange={handleChange} required disabled={isLoading} />
-                  </div>
+                  <div className="space-y-2"><Label className="text-sm font-bold ml-1">Имя</Label><Input name="first_name" placeholder="Имя" className="h-12 rounded-xl" value={formData.first_name} onChange={handleChange} required disabled={isLoading} /></div>
+                  <div className="space-y-2"><Label className="text-sm font-bold ml-1">Фамилия</Label><Input name="last_name" placeholder="Фамилия" className="h-12 rounded-xl" value={formData.last_name} onChange={handleChange} required disabled={isLoading} /></div>
                 </div>
-
                 {formData.role === 'employer' && (
-                  <div className="space-y-2">
-                    <Label className="text-sm font-bold ml-1">Название компании</Label>
-                    <Input name="company_name" placeholder="ООО «Компания»" className="h-12 rounded-xl" value={formData.company_name} onChange={handleChange} required disabled={isLoading} />
-                  </div>
+                  <div className="space-y-2"><Label className="text-sm font-bold ml-1">Название компании</Label><Input name="company_name" placeholder="ООО «Компания»" className="h-12 rounded-xl" value={formData.company_name} onChange={handleChange} required disabled={isLoading} /></div>
                 )}
-
-                <div className="space-y-2">
-                  <Label className="text-sm font-bold ml-1">Email</Label>
-                  <Input name="email" type="email" placeholder="example@mail.uz" className="h-12 rounded-xl" value={formData.email} onChange={handleChange} required disabled={isLoading} />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-sm font-bold ml-1">Телефон</Label>
-                  <Input name="phone" placeholder="+998 90 123 45 67" className="h-12 rounded-xl" value={formData.phone} onChange={handleChange} disabled={isLoading} />
-                </div>
+                <div className="space-y-2"><Label className="text-sm font-bold ml-1">Email</Label><Input name="email" type="email" placeholder="example@mail.uz" className="h-12 rounded-xl" value={formData.email} onChange={handleChange} required disabled={isLoading} /></div>
+                <div className="space-y-2"><Label className="text-sm font-bold ml-1">Телефон</Label><Input name="phone" placeholder="+998 90 123 45 67" className="h-12 rounded-xl" value={formData.phone} onChange={handleChange} disabled={isLoading} /></div>
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-2">
-                    <Label className="text-sm font-bold ml-1">Пароль</Label>
-                    <Input name="password" type="password" placeholder="••••••" className="h-12 rounded-xl" value={formData.password} onChange={handleChange} required disabled={isLoading} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-sm font-bold ml-1">Повторите</Label>
-                    <Input name="confirm_password" type="password" placeholder="••••••" className="h-12 rounded-xl" value={formData.confirm_password} onChange={handleChange} required disabled={isLoading} />
-                  </div>
+                  <div className="space-y-2"><Label className="text-sm font-bold ml-1">Пароль</Label><Input name="password" type="password" placeholder="••••••" className="h-12 rounded-xl" value={formData.password} onChange={handleChange} required disabled={isLoading} /></div>
+                  <div className="space-y-2"><Label className="text-sm font-bold ml-1">Повторите</Label><Input name="confirm_password" type="password" placeholder="••••••" className="h-12 rounded-xl" value={formData.confirm_password} onChange={handleChange} required disabled={isLoading} /></div>
                 </div>
                 <Button type="submit" className="w-full h-14 text-xl font-black bg-primary hover:bg-primary/90 rounded-xl shadow-lg shadow-primary/20" disabled={isLoading}>
                   {isLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : 'ЗАРЕГИСТРИРОВАТЬСЯ'}

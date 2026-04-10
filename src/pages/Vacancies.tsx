@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { getVacancies, getApplications } from '@/lib/mock-api';
+import { getVacancies, getApplications } from '@/lib/api';
 import { formatSalary, EMPLOYMENT_TYPES, EXPERIENCE_LEVELS, APPLICATION_STATUS_LABELS, APPLICATION_STATUS_COLORS } from '@/lib/constants';
 import { useAuth } from '@/hooks/useAuth';
 import { Vacancy } from '@/lib/types';
@@ -16,40 +16,48 @@ import { MapPin, Search, Filter, Briefcase, Users } from 'lucide-react';
 export default function VacanciesPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { user, isAuthenticated } = useAuth();
+  const { user, profile, isAuthenticated } = useAuth();
   const [vacancies, setVacancies] = useState<Vacancy[]>([]);
-  const [appliedMap, setAppliedMap] = useState<Record<number, string>>({});
+  const [appliedMap, setAppliedMap] = useState<Record<string, string>>({});
   const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [selectedLevels, setSelectedLevels] = useState<string[]>([]);
+  const [locationFilter, setLocationFilter] = useState('');
+  const [salaryMin, setSalaryMin] = useState('');
+  const [salaryMax, setSalaryMax] = useState('');
 
-  const loadVacancies = () => {
-    setVacancies(getVacancies({
+  const loadVacancies = async () => {
+    const v = await getVacancies({
       search: searchQuery || undefined,
       employmentType: selectedTypes.length ? selectedTypes.join(',') : undefined,
       experienceLevel: selectedLevels.length ? selectedLevels.join(',') : undefined,
-    }));
+      location: locationFilter || undefined,
+      salaryMin: salaryMin ? Number(salaryMin) : undefined,
+      salaryMax: salaryMax ? Number(salaryMax) : undefined,
+    });
+    setVacancies(v);
   };
 
-  useEffect(() => { loadVacancies(); }, [searchParams]);
+  useEffect(() => { loadVacancies(); }, [searchParams, selectedTypes, selectedLevels, locationFilter]);
+
   useEffect(() => {
-    if (isAuthenticated && user?.role === 'job_seeker') {
-      const apps = getApplications({ job_seeker_id: user.id });
-      const map: Record<number, string> = {};
-      apps.forEach(a => { map[a.vacancy_id] = a.status; });
-      setAppliedMap(map);
+    if (isAuthenticated && user && profile?.role === 'job_seeker') {
+      getApplications({ user_id: user.id }).then(apps => {
+        const map: Record<string, string> = {};
+        apps.forEach(a => { map[a.vacancy_id] = a.status; });
+        setAppliedMap(map);
+      });
     }
-  }, [isAuthenticated, user]);
+  }, [isAuthenticated, user, profile]);
 
   const handleSearch = (e: React.FormEvent) => { e.preventDefault(); loadVacancies(); };
   const toggleFilter = (type: 'type' | 'level', value: string) => {
-    const [arr, setter] = type === 'type' ? [selectedTypes, setSelectedTypes] : [selectedLevels, setSelectedLevels];
-    const next = arr.includes(value) ? arr.filter(v => v !== value) : [...arr, value];
-    setter(next);
-    setTimeout(() => loadVacancies(), 0);
+    if (type === 'type') {
+      setSelectedTypes(prev => prev.includes(value) ? prev.filter(v => v !== value) : [...prev, value]);
+    } else {
+      setSelectedLevels(prev => prev.includes(value) ? prev.filter(v => v !== value) : [...prev, value]);
+    }
   };
-
-  useEffect(() => { loadVacancies(); }, [selectedTypes, selectedLevels]);
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -60,6 +68,17 @@ export default function VacanciesPage() {
             <div className="bg-card p-6 rounded-2xl shadow-sm border border-border">
               <h2 className="font-black text-foreground mb-6 flex items-center gap-2 uppercase tracking-tighter text-sm"><Filter className="w-4 h-4 text-primary" /> Фильтры</h2>
               <div className="space-y-6">
+                <div className="space-y-3">
+                  <h3 className="font-bold text-xs text-muted-foreground uppercase tracking-widest">Город</h3>
+                  <Input placeholder="Город" value={locationFilter} onChange={e => setLocationFilter(e.target.value)} className="rounded-xl text-sm" />
+                </div>
+                <div className="space-y-3">
+                  <h3 className="font-bold text-xs text-muted-foreground uppercase tracking-widest">Зарплата (UZS)</h3>
+                  <div className="flex gap-2">
+                    <Input placeholder="От" type="number" value={salaryMin} onChange={e => setSalaryMin(e.target.value)} onBlur={loadVacancies} className="rounded-xl text-sm" />
+                    <Input placeholder="До" type="number" value={salaryMax} onChange={e => setSalaryMax(e.target.value)} onBlur={loadVacancies} className="rounded-xl text-sm" />
+                  </div>
+                </div>
                 <div className="space-y-3">
                   <h3 className="font-bold text-xs text-muted-foreground uppercase tracking-widest">Тип занятости</h3>
                   {Object.entries(EMPLOYMENT_TYPES).map(([key, label]) => (
@@ -107,7 +126,7 @@ export default function VacanciesPage() {
                         </div>
                         <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
                           {v.location && <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{v.location}</span>}
-                          <span className="flex items-center gap-1"><Users className="w-3 h-3" />{v.applications_count} откликов</span>
+                          <span className="flex items-center gap-1"><Users className="w-3 h-3" />{v.applications_count || 0} откликов</span>
                           <span className="bg-secondary px-2 py-0.5 rounded-full text-xs font-bold">{EMPLOYMENT_TYPES[v.employment_type] || v.employment_type}</span>
                         </div>
                       </div>

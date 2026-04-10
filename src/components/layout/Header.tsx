@@ -7,14 +7,14 @@ import { Menu, X, Bell, Briefcase } from 'lucide-react';
 
 export function Header() {
   const navigate = useNavigate();
-  const { user, isAuthenticated, logout } = useAuth();
+  const { profile, isAuthenticated, logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const handleLogout = () => { logout(); navigate('/'); };
+  const handleLogout = async () => { await logout(); navigate('/'); };
 
-  const displayName = user?.first_name || user?.email?.split('@')[0] || '';
+  const displayName = profile?.first_name || '';
   const avatarLetter = displayName?.[0]?.toUpperCase() || '?';
-  const cabinetRoute = user?.role === 'employer' ? '/employer' : user?.role === 'admin' ? '/admin' : '/cabinet';
+  const cabinetRoute = profile?.role === 'employer' ? '/employer' : profile?.role === 'admin' ? '/admin' : '/cabinet';
 
   const navLinks = [
     { label: 'Вакансии', href: '/vacancies' },
@@ -53,8 +53,8 @@ export function Header() {
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="sm" className="gap-2 hover:bg-secondary rounded-xl px-2">
                       <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-black ring-2 ${
-                        user?.role === 'admin' ? 'bg-purple-100 text-purple-700 ring-purple-400'
-                        : user?.role === 'employer' ? 'bg-blue-100 text-blue-700 ring-blue-400'
+                        profile?.role === 'admin' ? 'bg-purple-100 text-purple-700 ring-purple-400'
+                        : profile?.role === 'employer' ? 'bg-blue-100 text-blue-700 ring-blue-400'
                         : 'bg-green-100 text-green-700 ring-green-400'
                       }`}>{avatarLetter}</div>
                       <span className="hidden sm:inline text-sm font-bold text-foreground max-w-[140px] truncate">{displayName}</span>
