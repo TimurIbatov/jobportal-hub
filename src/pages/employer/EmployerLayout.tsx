@@ -15,15 +15,15 @@ const navItems = [
 ];
 
 export default function EmployerLayout() {
-  const { user, isAuthenticated, isInitialized } = useAuth();
+  const { profile, isAuthenticated, isInitialized } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
   useEffect(() => {
-    if (isInitialized && (!isAuthenticated || user?.role !== 'employer')) navigate('/login');
-  }, [isInitialized, isAuthenticated, user]);
+    if (isInitialized && (!isAuthenticated || !profile || profile.role !== 'employer')) navigate('/login');
+  }, [isInitialized, isAuthenticated, profile]);
 
-  if (!isInitialized || !user) return null;
+  if (!isInitialized || !profile) return null;
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
