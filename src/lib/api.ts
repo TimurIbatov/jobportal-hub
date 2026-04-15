@@ -7,7 +7,7 @@ export async function getProfile(userId: string): Promise<Profile | null> {
   return data as Profile | null;
 }
 
-export async function updateProfile(userId: string, updates: { first_name?: string; last_name?: string; phone?: string; bio?: string; company_name?: string; role?: string }): Promise<Profile> {
+export async function updateProfile(userId: string, updates: { first_name?: string; last_name?: string; phone?: string; bio?: string; company_name?: string }): Promise<Profile> {
   const { data, error } = await supabase.from('profiles').update(updates).eq('user_id', userId).select().single();
   if (error) throw new Error(error.message);
   return data as Profile;
