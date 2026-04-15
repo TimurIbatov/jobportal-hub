@@ -4,9 +4,9 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { getResumes, createResume, deleteResume, uploadResumeFile } from '@/lib/api';
+import { getResumes, createResume, deleteResume, uploadResumeFile, getResumeDownloadUrl } from '@/lib/api';
 import { Resume } from '@/lib/types';
-import { FileText, Plus, Trash2, Upload, Eye } from 'lucide-react';
+import { FileText, Plus, Trash2, Upload, Eye, Download } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 export default function CabinetResumes() {
@@ -41,6 +41,16 @@ export default function CabinetResumes() {
       toast({ title: 'Резюме загружено', description: file.name });
     } catch (err: any) {
       toast({ title: 'Ошибка загрузки', description: err.message, variant: 'destructive' });
+    }
+  };
+
+  const handleDownload = async (resume: Resume) => {
+    if (!resume.file_url) return;
+    try {
+      const url = await getResumeDownloadUrl(resume.file_url);
+      window.open(url, '_blank');
+    } catch (err: any) {
+      toast({ title: 'Ошибка', description: err.message, variant: 'destructive' });
     }
   };
 
@@ -79,6 +89,7 @@ export default function CabinetResumes() {
                 </div>
                 <div className="flex gap-2">
                   <Button variant="ghost" size="sm" onClick={() => setViewResume(r)} className="text-primary"><Eye className="w-4 h-4" /></Button>
+                  {r.file_url && <Button variant="ghost" size="sm" onClick={() => handleDownload(r)} className="text-primary"><Download className="w-4 h-4" /></Button>}
                   <Button variant="ghost" size="sm" onClick={() => handleDelete(r.id)} className="text-destructive"><Trash2 className="w-4 h-4" /></Button>
                 </div>
               </CardContent>
@@ -100,8 +111,8 @@ export default function CabinetResumes() {
               </div>
             </div>
             {viewResume?.file_url && (
-              <Button asChild className="w-full rounded-xl">
-                <a href={viewResume.file_url} target="_blank" rel="noopener noreferrer">Скачать файл</a>
+              <Button onClick={() => viewResume && handleDownload(viewResume)} className="w-full rounded-xl">
+                <Download className="w-4 h-4 mr-2" />Скачать файл
               </Button>
             )}
             {viewResume?.content && <p className="text-sm text-muted-foreground whitespace-pre-line">{viewResume.content}</p>}

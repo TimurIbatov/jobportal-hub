@@ -7,7 +7,7 @@ export async function getProfile(userId: string): Promise<Profile | null> {
   return data as Profile | null;
 }
 
-export async function updateProfile(userId: string, updates: { first_name?: string; last_name?: string; phone?: string; bio?: string; company_name?: string }): Promise<Profile> {
+export async function updateProfile(userId: string, updates: { first_name?: string; last_name?: string; phone?: string; bio?: string; company_name?: string; role?: string }): Promise<Profile> {
   const { data, error } = await supabase.from('profiles').update(updates).eq('user_id', userId).select().single();
   if (error) throw new Error(error.message);
   return data as Profile;
@@ -16,6 +16,11 @@ export async function updateProfile(userId: string, updates: { first_name?: stri
 export async function getAllProfiles(): Promise<Profile[]> {
   const { data } = await supabase.from('profiles').select('*').order('created_at', { ascending: false });
   return (data || []) as Profile[];
+}
+
+export async function deleteProfile(userId: string): Promise<void> {
+  const { error } = await supabase.from('profiles').delete().eq('user_id', userId);
+  if (error) throw new Error(error.message);
 }
 
 // ===== COMPANIES =====
@@ -47,6 +52,40 @@ export async function upsertCompany(userId: string, updates: { name: string; des
 }
 
 // ===== VACANCIES =====
+async function enrichVacanciesWithProfiles(vacancies: any[]): Promise<Vacancy[]> {
+  if (!vacancies || vacancies.length === 0) return [];
+  const userIds = [...new Set(vacancies.map(v => v.user_id))];
+  const { data: profiles } = await supabase.from('profiles').select('user_id, first_name, last_name, company_name').in('user_id', userIds);
+  const profileMap = new Map((profiles || []).map(p => [p.user_id, p]));
+  
+  return vacancies.map((v: any) => {
+    const prof = profileMap.get(v.user_id);
+    return {
+      id: v.id,
+      user_id: v.user_id,
+      company_id: v.company_id,
+      title: v.title,
+      description: v.description,
+      salary_min: v.salary_min,
+      salary_max: v.salary_max,
+      currency: v.currency,
+      employment_type: v.employment_type,
+      experience_level: v.experience_level,
+      location: v.location,
+      industry: v.industry,
+      skills_required: v.skills_required || [],
+      is_active: v.is_active,
+      views_count: v.views_count,
+      created_at: v.created_at,
+      updated_at: v.updated_at,
+      company_name: v.companies?.name || prof?.company_name || prof?.first_name || '',
+      employer_first_name: prof?.first_name,
+      employer_last_name: prof?.last_name,
+      applications_count: Array.isArray(v.applications) ? v.applications.length : 0,
+    };
+  });
+}
+
 export async function getVacancies(filters?: {
   search?: string;
   employmentType?: string;
@@ -57,7 +96,6 @@ export async function getVacancies(filters?: {
 }): Promise<Vacancy[]> {
   let query = supabase.from('vacancies').select(`
     *,
-    profiles!vacancies_user_id_fkey(first_name, last_name, company_name),
     companies(name),
     applications(id)
   `).eq('is_active', true).order('created_at', { ascending: false });
@@ -82,64 +120,36 @@ export async function getVacancies(filters?: {
   }
 
   const { data } = await query;
-  return mapVacancies(data);
-}
-
-function mapVacancies(data: any[] | null): Vacancy[] {
-  return (data || []).map((v: any) => ({
-    id: v.id,
-    user_id: v.user_id,
-    company_id: v.company_id,
-    title: v.title,
-    description: v.description,
-    salary_min: v.salary_min,
-    salary_max: v.salary_max,
-    currency: v.currency,
-    employment_type: v.employment_type,
-    experience_level: v.experience_level,
-    location: v.location,
-    industry: v.industry,
-    skills_required: v.skills_required || [],
-    is_active: v.is_active,
-    views_count: v.views_count,
-    created_at: v.created_at,
-    updated_at: v.updated_at,
-    company_name: v.companies?.name || v.profiles?.company_name || v.profiles?.first_name || '',
-    employer_first_name: v.profiles?.first_name,
-    employer_last_name: v.profiles?.last_name,
-    applications_count: Array.isArray(v.applications) ? v.applications.length : 0,
-  }));
+  return enrichVacanciesWithProfiles(data);
 }
 
 export async function getVacancy(id: string): Promise<Vacancy | null> {
   const { data } = await supabase.from('vacancies').select(`
     *,
-    profiles!vacancies_user_id_fkey(first_name, last_name, company_name),
     companies(name),
     applications(id)
   `).eq('id', id).single();
   if (!data) return null;
-  return mapVacancies([data])[0];
+  const enriched = await enrichVacanciesWithProfiles([data]);
+  return enriched[0] || null;
 }
 
 export async function getEmployerVacancies(userId: string): Promise<Vacancy[]> {
   const { data } = await supabase.from('vacancies').select(`
     *,
-    profiles!vacancies_user_id_fkey(first_name, last_name, company_name),
     companies(name),
     applications(id)
   `).eq('user_id', userId).order('created_at', { ascending: false });
-  return mapVacancies(data);
+  return enrichVacanciesWithProfiles(data);
 }
 
 export async function getAllVacancies(): Promise<Vacancy[]> {
   const { data } = await supabase.from('vacancies').select(`
     *,
-    profiles!vacancies_user_id_fkey(first_name, last_name, company_name),
     companies(name),
     applications(id)
   `).order('created_at', { ascending: false });
-  return mapVacancies(data);
+  return enrichVacanciesWithProfiles(data);
 }
 
 export async function createVacancy(v: {
@@ -194,6 +204,11 @@ export async function toggleVacancyActive(id: string, isActive: boolean): Promis
   if (error) throw new Error(error.message);
 }
 
+export async function deleteVacancy(id: string): Promise<void> {
+  const { error } = await supabase.from('vacancies').delete().eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
 // ===== APPLICATIONS =====
 export async function getApplications(filters?: {
   vacancy_id?: string;
@@ -205,36 +220,59 @@ export async function getApplications(filters?: {
     const vacIds = (vacancies || []).map(v => v.id);
     if (vacIds.length === 0) return [];
     const vacMap = Object.fromEntries((vacancies || []).map(v => [v.id, v.title]));
-    const { data } = await supabase.from('applications').select(`
-      *,
-      profiles!applications_user_id_fkey(first_name, last_name)
-    `).in('vacancy_id', vacIds).order('created_at', { ascending: false });
+    const { data } = await supabase.from('applications').select('*').in('vacancy_id', vacIds).order('created_at', { ascending: false });
+    // Enrich with profile data
+    const userIds = [...new Set((data || []).map((a: any) => a.user_id))];
+    const { data: profiles } = await supabase.from('profiles').select('user_id, first_name, last_name').in('user_id', userIds);
+    const profMap = new Map((profiles || []).map(p => [p.user_id, p]));
     return (data || []).map((a: any) => ({
       ...a,
       vacancy_title: vacMap[a.vacancy_id] || '',
-      first_name: a.profiles?.first_name || '',
-      last_name: a.profiles?.last_name || '',
-      profiles: undefined,
+      first_name: profMap.get(a.user_id)?.first_name || '',
+      last_name: profMap.get(a.user_id)?.last_name || '',
     }));
   }
 
-  let query = supabase.from('applications').select(`
-    *,
-    vacancies(title),
-    profiles!applications_user_id_fkey(first_name, last_name)
-  `).order('created_at', { ascending: false });
-
+  let query = supabase.from('applications').select('*').order('created_at', { ascending: false });
   if (filters?.vacancy_id) query = query.eq('vacancy_id', filters.vacancy_id);
   if (filters?.user_id) query = query.eq('user_id', filters.user_id);
 
   const { data } = await query;
+  // Enrich with vacancy titles and profile names
+  const vacIds = [...new Set((data || []).map((a: any) => a.vacancy_id))];
+  const userIds = [...new Set((data || []).map((a: any) => a.user_id))];
+  
+  const [{ data: vacancies }, { data: profiles }] = await Promise.all([
+    vacIds.length > 0 ? supabase.from('vacancies').select('id, title').in('id', vacIds) : { data: [] },
+    userIds.length > 0 ? supabase.from('profiles').select('user_id, first_name, last_name').in('user_id', userIds) : { data: [] },
+  ]);
+  
+  const vacMap = new Map((vacancies || []).map((v: any) => [v.id, v.title]));
+  const profMap = new Map((profiles || []).map((p: any) => [p.user_id, p]));
+  
   return (data || []).map((a: any) => ({
     ...a,
-    vacancy_title: a.vacancies?.title || '',
-    first_name: a.profiles?.first_name || '',
-    last_name: a.profiles?.last_name || '',
-    vacancies: undefined,
-    profiles: undefined,
+    vacancy_title: vacMap.get(a.vacancy_id) || '',
+    first_name: profMap.get(a.user_id)?.first_name || '',
+    last_name: profMap.get(a.user_id)?.last_name || '',
+  }));
+}
+
+export async function getAllApplications(): Promise<Application[]> {
+  const { data } = await supabase.from('applications').select('*').order('created_at', { ascending: false });
+  const vacIds = [...new Set((data || []).map((a: any) => a.vacancy_id))];
+  const userIds = [...new Set((data || []).map((a: any) => a.user_id))];
+  const [{ data: vacancies }, { data: profiles }] = await Promise.all([
+    vacIds.length > 0 ? supabase.from('vacancies').select('id, title').in('id', vacIds) : { data: [] },
+    userIds.length > 0 ? supabase.from('profiles').select('user_id, first_name, last_name').in('user_id', userIds) : { data: [] },
+  ]);
+  const vacMap = new Map((vacancies || []).map((v: any) => [v.id, v.title]));
+  const profMap = new Map((profiles || []).map((p: any) => [p.user_id, p]));
+  return (data || []).map((a: any) => ({
+    ...a,
+    vacancy_title: vacMap.get(a.vacancy_id) || '',
+    first_name: profMap.get(a.user_id)?.first_name || '',
+    last_name: profMap.get(a.user_id)?.last_name || '',
   }));
 }
 
@@ -260,6 +298,11 @@ export async function updateApplicationStatus(id: string, status: ApplicationSta
   const { data, error } = await supabase.from('applications').update({ status }).eq('id', id).select().single();
   if (error) throw new Error(error.message);
   return data as Application;
+}
+
+export async function deleteApplication(id: string): Promise<void> {
+  const { error } = await supabase.from('applications').delete().eq('id', id);
+  if (error) throw new Error(error.message);
 }
 
 // ===== RESUMES =====
@@ -289,8 +332,23 @@ export async function uploadResumeFile(userId: string, file: File): Promise<stri
   const path = `${userId}/${Date.now()}.${ext}`;
   const { error } = await supabase.storage.from('resumes').upload(path, file);
   if (error) throw new Error(error.message);
-  const { data } = supabase.storage.from('resumes').getPublicUrl(path);
-  return data.publicUrl;
+  // Use signed URL since bucket is private
+  const { data, error: urlError } = await supabase.storage.from('resumes').createSignedUrl(path, 60 * 60 * 24 * 365);
+  if (urlError) throw new Error(urlError.message);
+  return data.signedUrl;
+}
+
+export async function getResumeDownloadUrl(fileUrl: string): Promise<string> {
+  // If it's already a signed URL or external URL, return as-is
+  if (fileUrl.includes('token=')) return fileUrl;
+  // Extract path from public URL
+  const match = fileUrl.match(/\/storage\/v1\/object\/public\/resumes\/(.+)/);
+  if (match) {
+    const { data, error } = await supabase.storage.from('resumes').createSignedUrl(match[1], 60 * 60);
+    if (error) throw new Error(error.message);
+    return data.signedUrl;
+  }
+  return fileUrl;
 }
 
 export async function getResumesByApplicant(applicantUserId: string): Promise<Resume[]> {
@@ -300,29 +358,29 @@ export async function getResumesByApplicant(applicantUserId: string): Promise<Re
 
 // ===== MESSAGES =====
 export async function getMessages(userId: string): Promise<Message[]> {
-  const { data } = await supabase.from('messages').select(`
-    *,
-    sender:profiles!messages_sender_id_fkey(first_name, last_name)
-  `).or(`sender_id.eq.${userId},recipient_id.eq.${userId}`).order('created_at', { ascending: true });
+  const { data } = await supabase.from('messages').select('*').or(`sender_id.eq.${userId},recipient_id.eq.${userId}`).order('created_at', { ascending: true });
+  // Enrich with sender names
+  const senderIds = [...new Set((data || []).map((m: any) => m.sender_id))];
+  const { data: profiles } = await supabase.from('profiles').select('user_id, first_name, last_name').in('user_id', senderIds);
+  const profMap = new Map((profiles || []).map(p => [p.user_id, `${p.first_name} ${p.last_name}`]));
   return (data || []).map((m: any) => ({
     ...m,
-    sender_name: m.sender ? `${m.sender.first_name} ${m.sender.last_name}` : '',
-    sender: undefined,
+    sender_name: profMap.get(m.sender_id) || '',
   })) as Message[];
 }
 
 export async function getConversation(userId: string, otherUserId: string, vacancyId?: string): Promise<Message[]> {
-  let query = supabase.from('messages').select(`
-    *,
-    sender:profiles!messages_sender_id_fkey(first_name, last_name)
-  `).or(`and(sender_id.eq.${userId},recipient_id.eq.${otherUserId}),and(sender_id.eq.${otherUserId},recipient_id.eq.${userId})`);
+  let query = supabase.from('messages').select('*')
+    .or(`and(sender_id.eq.${userId},recipient_id.eq.${otherUserId}),and(sender_id.eq.${otherUserId},recipient_id.eq.${userId})`);
   if (vacancyId) query = query.eq('vacancy_id', vacancyId);
   query = query.order('created_at', { ascending: true });
   const { data } = await query;
+  const senderIds = [...new Set((data || []).map((m: any) => m.sender_id))];
+  const { data: profiles } = await supabase.from('profiles').select('user_id, first_name, last_name').in('user_id', senderIds);
+  const profMap = new Map((profiles || []).map(p => [p.user_id, `${p.first_name} ${p.last_name}`]));
   return (data || []).map((m: any) => ({
     ...m,
-    sender_name: m.sender ? `${m.sender.first_name} ${m.sender.last_name}` : '',
-    sender: undefined,
+    sender_name: profMap.get(m.sender_id) || '',
   })) as Message[];
 }
 
@@ -359,11 +417,10 @@ export async function getSavedVacancies(userId: string): Promise<Vacancy[]> {
   const vacIds = data.map(sv => sv.vacancy_id);
   const { data: vacData } = await supabase.from('vacancies').select(`
     *,
-    profiles!vacancies_user_id_fkey(first_name, last_name, company_name),
     companies(name),
     applications(id)
   `).in('id', vacIds);
-  return mapVacancies(vacData);
+  return enrichVacanciesWithProfiles(vacData);
 }
 
 export async function saveVacancy(userId: string, vacancyId: string): Promise<void> {
