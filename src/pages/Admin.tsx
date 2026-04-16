@@ -123,17 +123,30 @@ export default function AdminPage() {
 
           <TabsContent value="users">
             <div className="space-y-2">{users.map(u => (
-              <Card key={u.id} className="border-none shadow-sm"><CardContent className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <Card key={u.id} className={`border-none shadow-sm ${u.is_blocked ? 'opacity-60' : ''}`}><CardContent className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                   <div>
                     <p className="font-bold text-foreground flex items-center gap-1">
                       {u.first_name} {u.last_name}
                       {u.is_verified && <BadgeCheck className="w-4 h-4 text-green-600" />}
+                      {u.is_blocked && <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-destructive/10 text-destructive">Заблокирован</span>}
                     </p>
                     <p className="text-sm text-muted-foreground">{roleLabels[u.role] || u.role}{u.company_name ? ` • ${u.company_name}` : ''}</p>
                   </div>
                 </div>
-                <Button variant="outline" size="sm" onClick={() => openEditUser(u)}><Pencil className="w-4 h-4 mr-1" />Редактировать</Button>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm" onClick={() => openEditUser(u)}><Pencil className="w-4 h-4 mr-1" />Изменить</Button>
+                  {u.role !== 'admin' && (
+                    <>
+                      <Button variant="outline" size="sm" onClick={() => handleBlockUser(u.user_id, u.is_blocked)} title={u.is_blocked ? 'Разблокировать' : 'Заблокировать'}>
+                        {u.is_blocked ? <ShieldOff className="w-4 h-4" /> : <Ban className="w-4 h-4" />}
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => handleDeleteUser(u.user_id)} className="text-destructive hover:text-destructive" title="Удалить">
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </>
+                  )}
+                </div>
               </CardContent></Card>
             ))}</div>
           </TabsContent>
