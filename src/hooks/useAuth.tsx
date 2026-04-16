@@ -70,6 +70,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!data.user) throw new Error('Ошибка входа');
       const p = await fetchProfile(data.user.id);
       if (!p) throw new Error('Профиль не найден');
+      if (p.is_blocked) {
+        await supabase.auth.signOut();
+        throw new Error('Ваш аккаунт заблокирован. Обратитесь к администратору.');
+      }
       return p;
     } catch (e: any) {
       setError(e.message);
