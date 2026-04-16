@@ -69,6 +69,15 @@ export default function AdminPage() {
     try { await updateProfile(editUser.user_id, { first_name: editForm.first_name, last_name: editForm.last_name }); toast({ title: 'Профиль обновлён' }); setEditUser(null); await load(); }
     catch (e: any) { toast({ title: 'Ошибка', description: e.message, variant: 'destructive' }); }
   };
+  const handleBlockUser = async (userId: string, currentlyBlocked: boolean) => {
+    try { await blockUser(userId, !currentlyBlocked); toast({ title: currentlyBlocked ? 'Пользователь разблокирован' : 'Пользователь заблокирован' }); await load(); }
+    catch (e: any) { toast({ title: 'Ошибка', description: e.message, variant: 'destructive' }); }
+  };
+  const handleDeleteUser = async (userId: string) => {
+    if (!confirm('Удалить пользователя? Это действие необратимо!')) return;
+    try { await deleteUser(userId); toast({ title: 'Пользователь удалён' }); await load(); }
+    catch (e: any) { toast({ title: 'Ошибка', description: e.message, variant: 'destructive' }); }
+  };
 
   const openVerification = async (u: Profile) => {
     setViewingVerification(u);
