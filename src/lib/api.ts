@@ -23,6 +23,19 @@ export async function deleteProfile(userId: string): Promise<void> {
   if (error) throw new Error(error.message);
 }
 
+export async function blockUser(userId: string, blocked: boolean): Promise<void> {
+  const { error } = await supabase.from('profiles').update({ is_blocked: blocked } as any).eq('user_id', userId);
+  if (error) throw new Error(error.message);
+}
+
+export async function deleteUser(userId: string): Promise<void> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) throw new Error('Not authenticated');
+  const resp = await supabase.functions.invoke('delete-user', { body: { userId } });
+  if (resp.error) throw new Error(resp.error.message || 'Failed to delete user');
+  if (resp.data?.error) throw new Error(resp.data.error);
+}
+
 // ===== COMPANIES =====
 export async function getCompanies(): Promise<Company[]> {
   const { data: companies } = await supabase.from('companies').select('*').order('created_at', { ascending: false });
