@@ -140,11 +140,14 @@ export type Database = {
           created_at: string
           first_name: string
           id: string
+          is_verified: boolean
           last_name: string
           phone: string | null
           role: Database["public"]["Enums"]["app_role"]
           updated_at: string
           user_id: string
+          verification_doc_url: string | null
+          verification_status: string
         }
         Insert: {
           avatar_url?: string | null
@@ -153,11 +156,14 @@ export type Database = {
           created_at?: string
           first_name?: string
           id?: string
+          is_verified?: boolean
           last_name?: string
           phone?: string | null
           role?: Database["public"]["Enums"]["app_role"]
           updated_at?: string
           user_id: string
+          verification_doc_url?: string | null
+          verification_status?: string
         }
         Update: {
           avatar_url?: string | null
@@ -166,11 +172,14 @@ export type Database = {
           created_at?: string
           first_name?: string
           id?: string
+          is_verified?: boolean
           last_name?: string
           phone?: string | null
           role?: Database["public"]["Enums"]["app_role"]
           updated_at?: string
           user_id?: string
+          verification_doc_url?: string | null
+          verification_status?: string
         }
         Relationships: []
       }
