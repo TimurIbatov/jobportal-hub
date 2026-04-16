@@ -1,5 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
-import type { Profile, Vacancy, Application, Resume, Message, Company, Service, UserService, ApplicationStatus } from './types';
+import type { Profile, Vacancy, Application, Resume, Message, Company, Service, UserService, ApplicationStatus, VerificationStatus } from './types';
 
 // ===== PROFILES =====
 export async function getProfile(userId: string): Promise<Profile | null> {
@@ -474,4 +474,44 @@ export async function getAdminStats() {
     applications: applications || 0,
     activeVacancies: (allV || []).filter(v => v.is_active).length,
   };
+}
+
+// ===== VERIFICATION =====
+export async function uploadVerificationDoc(userId: string, file: File): Promise<string> {
+  const ext = file.name.split('.').pop();
+  const path = `${userId}/${Date.now()}.${ext}`;
+  const { error } = await supabase.storage.from('verification-docs').upload(path, file);
+  if (error) throw new Error(error.message);
+  return path;
+}
+
+export async function submitVerification(userId: string, docPath: string): Promise<void> {
+  const { error } = await supabase.from('profiles').update({
+    verification_doc_url: docPath,
+    verification_status: 'pending',
+  }).eq('user_id', userId);
+  if (error) throw new Error(error.message);
+}
+
+export async function getVerificationDocUrl(docPath: string): Promise<string> {
+  const { data, error } = await supabase.storage.from('verification-docs').createSignedUrl(docPath, 60 * 60);
+  if (error) throw new Error(error.message);
+  return data.signedUrl;
+}
+
+export async function approveVerification(userId: string): Promise<void> {
+  const { error } = await supabase.from('profiles').update({
+    verification_status: 'approved',
+    is_verified: true,
+  }).eq('user_id', userId);
+  if (error) throw new Error(error.message);
+}
+
+export async function rejectVerification(userId: string): Promise<void> {
+  const { error } = await supabase.from('profiles').update({
+    verification_status: 'rejected',
+    is_verified: false,
+    verification_doc_url: null,
+  }).eq('user_id', userId);
+  if (error) throw new Error(error.message);
 }
