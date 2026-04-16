@@ -1,6 +1,8 @@
 export type UserRole = 'job_seeker' | 'employer' | 'admin';
 export type ApplicationStatus = 'pending' | 'reviewing' | 'accepted' | 'rejected';
 
+export type VerificationStatus = 'none' | 'pending' | 'approved' | 'rejected';
+
 export interface Profile {
   id: string;
   user_id: string;
@@ -11,6 +13,9 @@ export interface Profile {
   company_name?: string | null;
   bio?: string | null;
   avatar_url?: string | null;
+  is_verified: boolean;
+  verification_status: VerificationStatus;
+  verification_doc_url?: string | null;
   created_at: string;
   updated_at: string;
 }
