@@ -14,6 +14,7 @@ export interface Profile {
   bio?: string | null;
   avatar_url?: string | null;
   is_verified: boolean;
+  is_blocked: boolean;
   verification_status: VerificationStatus;
   verification_doc_url?: string | null;
   created_at: string;

@@ -5,14 +5,14 @@ import { Footer } from '@/components/layout/Footer';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { getAdminStats, getAllProfiles, getAllVacancies, getAllApplications, toggleVacancyActive, deleteVacancy, deleteApplication, updateApplicationStatus, updateProfile, approveVerification, rejectVerification, getVerificationDocUrl } from '@/lib/api';
+import { getAdminStats, getAllProfiles, getAllVacancies, getAllApplications, toggleVacancyActive, deleteVacancy, deleteApplication, updateApplicationStatus, updateProfile, approveVerification, rejectVerification, getVerificationDocUrl, blockUser, deleteUser } from '@/lib/api';
 import { formatSalary } from '@/lib/constants';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Trash2, Pencil, Eye, EyeOff, BadgeCheck, Clock, FileText, CheckCircle, XCircle } from 'lucide-react';
+import { Trash2, Pencil, Eye, EyeOff, BadgeCheck, Clock, FileText, CheckCircle, XCircle, Ban, ShieldOff } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { Profile, Vacancy, Application, ApplicationStatus } from '@/lib/types';
 
